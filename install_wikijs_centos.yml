@@ -1,0 +1,75 @@
+---
+
+- name: Deploy Wiki.js on CentOS with PostgreSQL
+  hosts: all
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+
+  - name: Install Docker
+    package:
+      name: 
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+      state: present
+
+  - name: Add Docker repository
+    yum_repository:
+      name: docker-ce-stable
+      baseurl: https://download.docker.com/linux/centos/7/x86_64/stable
+      gpgcheck: yes
+      gpgkey: https://download.docker.com/linux/centos/gpg
+      enabled: yes
+      description: configure yum for docker
+
+  - name: Install Docker
+    yum:
+      name: docker-ce
+      state: present
+
+
+  - name: Start and enable Docker service
+    systemd:
+      name: docker
+      state: started
+      enabled: yes
+
+  - name: Install EPEL repository
+    yum:
+      name: epel-release
+      state: present
+
+  - name: Install pip for Python 3
+    yum:
+      name: python-pip
+      state: present
+
+  - name: Install setuptools-scm
+    pip:
+      name: setuptools-scm
+      state: present
+      executable: pip3
+
+  - name: Upgrade pip for Python3
+    pip:
+      name: pip
+      state: latest
+      executable: pip3
+
+  - name: Install required Python library for Docker
+    pip:
+      name: 
+        - docker
+        - docker-compose
+      state: present
+      executable: pip3
+
+  - name: Create Wiki.js data volume
+    docker_volume:
+      name: wikijs_data
+    
+  - name: Create Wiki.js PostgreSQL data volume
+    docker_volume:
+      name: wikijs_postgres_data

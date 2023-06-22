@@ -1,0 +1,21 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: update repository index
+    dnf:
+      update_cache: yes
+
+  - name: remove apache2 package
+    dnf:
+      name: httpd
+      state: absent
+
+  - name: remove php support for apache
+    dnf:
+      name: php
+      state: absent
+
+

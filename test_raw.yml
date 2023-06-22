@@ -1,0 +1,71 @@
+---
+- name: Deploy Wiki.js with PostgreSQL on CentOS
+  hosts: all
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+
+    - name: Install Python 'docker' library
+      pip:
+        name: docker
+        executable: pip3
+
+    - name: Install Python 'requests' library
+      pip:
+        name: requests
+        executable: pip3
+
+    - name: Install Docker dependencies
+      raw: dnf install -y yum-utils device-mapper-persistent-data lvm2
+
+    - name: Set up Docker repository
+      raw: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Install Docker
+      raw: dnf install -y docker-ce docker-ce-cli containerd.io
+
+    - name: Start and enable Docker service
+      raw: systemctl start docker && systemctl enable docker
+
+    - name: Create a network for Wiki.js
+      docker_network:
+        name: wikijs_network
+
+    - name: Create a volume for PostgreSQL data
+      docker_volume:
+        name: wikijs_postgres_data
+
+
+    - name: Create a container for PostgreSQL
+      docker_container:
+        name: wikijs_postgres
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: wikijspassword
+          POSTGRES_DB: wikijs
+        volumes:
+          - wikijs_postgres_data:/var/lib/postgresql/data
+        networks:
+          - name: wikijs_network
+        restart_policy: unless-stopped
+
+
+    - name: Create a container for Wiki.js
+      docker_container:
+        name: wikijs_app
+        image: requarks/wiki:2
+        ports:
+          - "80:3000"
+        env:
+          DB_TYPE: postgres
+          DB_HOST: wikijs_postgres
+          DB_PORT: '5432'
+          DB_USER: postgres
+          DB_PASS: wikijspassword
+          DB_NAME: wikijs
+        volumes:
+          - /srv/wikijs:/var/wiki
+        networks:
+          - name: wikijs_network
+        restart_policy: unless-stopped
